@@ -1,0 +1,170 @@
+// tb_regfile_alu.v
+`timescale 1ns / 1ps
+
+module tb_regfile_alu;
+
+    // Parameters
+    localparam CLK_PERIOD = 10; // ns
+
+    // Register File Interface signals
+    reg CLK;
+    reg WE3;
+    reg [4:0] A1, A2, A3;
+    reg [31:0] WD3;
+    wire [31:0] RD1;
+    wire [31:0] RD2;
+
+    // ALU Interface signals
+    reg [31:0] alu_inputA;
+    reg [31:0] alu_inputB;
+    reg [1:0]  alu_opcode;
+    wire [31:0] alu_ALU_result;
+
+    // Instantiate Register File
+    register_file rf_inst (
+        .CLK(CLK),
+        .WE3(WE3),
+        .A1(A1),
+        .A2(A2),
+        .A3(A3),
+        .WD3(WD3),
+        .RD1(RD1),
+        .RD2(RD2)
+    );
+
+    // Instantiate ALU
+    alu alu_inst (
+        .inputA(alu_inputA),
+        .inputB(alu_inputB),
+        .opcode(alu_opcode),
+        .ALU_result(alu_ALU_result)
+    );
+
+    // Clock generation
+    initial begin
+        CLK = 0;
+        forever #(CLK_PERIOD/2) CLK = ~CLK;
+    end
+
+    // Test sequence
+    initial begin
+        $display("Starting Testbench for Register File and ALU...");
+
+        // Initialize inputs
+        WE3 = 0;
+        A1 = 5'd0; A2 = 5'd0; A3 = 5'd0;
+        WD3 = 32'd0;
+        alu_inputA = 32'd0;
+        alu_inputB = 32'd0;
+        alu_opcode = 2'b00;
+
+        // Wait for initial blocks and for clock to start
+        #(2 * CLK_PERIOD);
+
+        // --- Scenario 1: ADD ---
+        // Write 10 to register10 & 15 to register15.
+        // Read, ADD, write result (25) to register20.
+        $display("\n--- Scenario 1: ADD Operation ---");
+        // Write 10 to R10
+        WE3 = 1; A3 = 10; WD3 = 10;
+        #(CLK_PERIOD); $display("Time: %0t: Wrote %d to R%d", $time, WD3, A3);
+        // Write 15 to R15
+        A3 = 15; WD3 = 15;
+        #(CLK_PERIOD); $display("Time: %0t: Wrote %d to R%d", $time, WD3, A3);
+        WE3 = 0;
+
+        // Read from R10 (->RD1), R15 (->RD2)
+        A1 = 10; A2 = 15;
+        #(1); // Allow combinational read outputs to settle
+        $display("Time: %0t: Reading R%d -> RD1=%d, R%d -> RD2=%d", $time, A1, RD1, A2, RD2);
+        
+        alu_inputA = RD1;
+        alu_inputB = RD2;
+        alu_opcode = 2'b00; // ADD
+        #(1); // Allow ALU result to settle
+        $display("Time: %0t: ALU: %d + %d = %d (Expected: 25)", $time, alu_inputA, alu_inputB, alu_ALU_result);
+        if (alu_ALU_result !== 25) $error("ADD Test Failed: ALU output mismatch.");
+
+        // Write ALU result to R20
+        WE3 = 1; A3 = 20; WD3 = alu_ALU_result;
+        #(CLK_PERIOD); $display("Time: %0t: Wrote ALU result %d to R%d", $time, WD3, A3);
+        WE3 = 0;
+
+        // Verify R20
+        A1 = 20; A2 = 0; // A2 can be anything, RD1 is used for verification
+        #(1); $display("Time: %0t: Verifying R%d -> RD1=%d (Expected: 25)", $time, A1, RD1);
+        if (RD1 !== 25) $error("ADD Test Verification Failed: R20 content mismatch.");
+        else $display("ADD Test Passed and Verified.");
+
+        // --- Scenario 2: SUB ---
+        // Write 20 to R10 & 15 to R15.
+        // Read, SUB, write result (5) to R20.
+        $display("\n--- Scenario 2: SUB Operation ---");
+        WE3 = 1; A3 = 10; WD3 = 20;
+        #(CLK_PERIOD); $display("Time: %0t: Wrote %d to R%d", $time, WD3, A3);
+        A3 = 15; WD3 = 15; // R15 already 15, but problem states "write values"
+        #(CLK_PERIOD); $display("Time: %0t: Wrote %d to R%d", $time, WD3, A3);
+        WE3 = 0;
+
+        A1 = 10; A2 = 15; #(1);
+        $display("Time: %0t: Reading R%d -> RD1=%d, R%d -> RD2=%d", $time, A1, RD1, A2, RD2);
+        alu_inputA = RD1; alu_inputB = RD2; alu_opcode = 2'b01; // SUB
+        #(1); $display("Time: %0t: ALU: %d - %d = %d (Expected: 5)", $time, alu_inputA, alu_inputB, alu_ALU_result);
+        if (alu_ALU_result !== 5) $error("SUB Test Failed: ALU output mismatch.");
+
+        WE3 = 1; A3 = 20; WD3 = alu_ALU_result;
+        #(CLK_PERIOD); $display("Time: %0t: Wrote ALU result %d to R%d", $time, WD3, A3);
+        WE3 = 0;
+
+        A1 = 20; #(1); $display("Time: %0t: Verifying R%d -> RD1=%d (Expected: 5)", $time, A1, RD1);
+        if (RD1 !== 5) $error("SUB Test Verification Failed: R20 content mismatch.");
+        else $display("SUB Test Passed and Verified.");
+
+        // --- Scenario 3: SHIFTL ---
+        // Write 31 to R10 & 2 to R15.
+        // Read, SHIFTL (31 << 2 = 124), write result to R20.
+        $display("\n--- Scenario 3: SHIFTL Operation ---");
+        WE3 = 1; A3 = 10; WD3 = 31;
+        #(CLK_PERIOD); $display("Time: %0t: Wrote %d to R%d", $time, WD3, A3);
+        A3 = 15; WD3 = 2;
+        #(CLK_PERIOD); $display("Time: %0t: Wrote %d to R%d", $time, WD3, A3);
+        WE3 = 0;
+
+        A1 = 10; A2 = 15; #(1);
+        $display("Time: %0t: Reading R%d -> RD1=%d, R%d -> RD2=%d", $time, A1, RD1, A2, RD2);
+        alu_inputA = RD1; alu_inputB = RD2; alu_opcode = 2'b10; // SHIFTL
+        #(1); $display("Time: %0t: ALU: %d << %d = %d (Expected: 124)", $time, alu_inputA, alu_inputB, alu_ALU_result);
+        if (alu_ALU_result !== 124) $error("SHIFTL Test Failed: ALU output mismatch.");
+
+        WE3 = 1; A3 = 20; WD3 = alu_ALU_result;
+        #(CLK_PERIOD); $display("Time: %0t: Wrote ALU result %d to R%d", $time, WD3, A3);
+        WE3 = 0;
+
+        A1 = 20; #(1); $display("Time: %0t: Verifying R%d -> RD1=%d (Expected: 124)", $time, A1, RD1);
+        if (RD1 !== 124) $error("SHIFTL Test Verification Failed: R20 content mismatch.");
+        else $display("SHIFTL Test Passed and Verified.");
+
+        // --- Scenario 4: SHIFTR ---
+        // Use same values (31 from R10, 2 from R15).
+        // Read, SHIFTR (31 >> 2 = 7), write result to R20.
+        $display("\n--- Scenario 4: SHIFTR Operation ---");
+        // R10 still has 31, R15 still has 2.
+        A1 = 10; A2 = 15; #(1);
+        $display("Time: %0t: Reading R%d -> RD1=%d, R%d -> RD2=%d", $time, A1, RD1, A2, RD2);
+        alu_inputA = RD1; alu_inputB = RD2; alu_opcode = 2'b11; // SHIFTR
+        #(1); $display("Time: %0t: ALU: %d >> %d = %d (Expected: 7)", $time, alu_inputA, alu_inputB, alu_ALU_result);
+        if (alu_ALU_result !== 7) $error("SHIFTR Test Failed: ALU output mismatch.");
+
+        WE3 = 1; A3 = 20; WD3 = alu_ALU_result;
+        #(CLK_PERIOD); $display("Time: %0t: Wrote ALU result %d to R%d", $time, WD3, A3);
+        WE3 = 0;
+
+        A1 = 20; #(1); $display("Time: %0t: Verifying R%d -> RD1=%d (Expected: 7)", $time, A1, RD1);
+        if (RD1 !== 7) $error("SHIFTR Test Verification Failed: R20 content mismatch.");
+        else $display("SHIFTR Test Passed and Verified.");
+
+        $display("\nAll tests completed.");
+        $finish;
+    end
+
+endmodule
