@@ -23,8 +23,7 @@ module alu (
     input [31:0] src_a,
     input [31:0] src_b,
     input [2:0] alu_control, // 3 bits for 7 operations
-    output reg [31:0] alu_result,
-    output zero // Optional: For branch conditions, but good to have
+    output reg [31:0] alu_result
 );
 
     // ALU control codes (defined in instruction_decoder)
@@ -46,7 +45,5 @@ module alu (
             default:    alu_result = 32'hX; // Undefined behavior
         endcase
     end
-
-    assign zero = (alu_result == 32'h0); // For future branch use, not needed now
 
 endmodule

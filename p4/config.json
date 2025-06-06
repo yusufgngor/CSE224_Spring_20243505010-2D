@@ -6,23 +6,25 @@
     "CLOCK_TREE_SYNTH": false,
     "CLOCK_PERIOD": 10,
     "CLOCK_PORT": "clk_i",
-    "PL_RANDOM_GLB_PLACEMENT": true,
+    "PL_RANDOM_GLB_PLACEMENT": false,
     "FP_SIZING": "absolute",
-    "DIE_AREA": "0 0 200 300",
-    "PL_TARGET_DENSITY": 0.4,
-    "FP_PDN_AUTO_ADJUST": false,
-    "FP_PDN_VPITCH": 25,
-    "FP_PDN_HPITCH": 25,
+    "DIE_AREA": "0 0 1500 1800",
+    "PL_TARGET_DENSITY": 0.2,
+    "FP_CORE_UTIL": 0.2,
+    "FP_PDN_AUTO_ADJUST": true,
+    "FP_PDN_VPITCH": 30,
+    "FP_PDN_HPITCH": 30,
     "FP_PDN_VOFFSET": 5,
     "FP_PDN_HOFFSET": 5,
-    "DIODE_INSERTION_STRATEGY": 4,
+    "GRT_REPAIR_ANTENNAS": 1,
+    "DIODE_ON_PORTS": "both",
+    "RUN_HEURISTIC_DIODE_INSERTION": 1,
     "//": "Pin Order",
     "FP_PIN_ORDER_CFG": "dir::pin_order.cfg",
     "//": "Technology-Specific Configs",
-    "SYNTH_STRATEGY": "DELAY 4",
     "pdk::sky130*": {
-        "FP_CORE_UTIL": 45,
         "CLOCK_PERIOD": 10,
+        "FP_CORE_UTIL": 0.3,
         "scl::sky130_fd_sc_hs": {
             "CLOCK_PERIOD": 8
         },
@@ -32,8 +34,8 @@
     },
     "pdk::gf180mcu*": {
         "CLOCK_PERIOD": 24.0,
-        "FP_CORE_UTIL": 40,
+        "FP_CORE_UTIL": 0.3,
         "MAX_FANOUT_CONSTRAINT": 4,
-        "PL_TARGET_DENSITY": 0.5
+        "PL_TARGET_DENSITY": 0.4
     }
 }

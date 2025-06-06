@@ -26,7 +26,7 @@ module program_counter (
     output reg [4:0] pc_address // 5-bit for up to 32 instructions
 );
 
-    always @(posedge clk or posedge reset) begin
+    always @(posedge clk) begin
         if (reset) begin
             pc_address <= 5'd0; // Reset PC to 0
         end else if (control_input) begin
